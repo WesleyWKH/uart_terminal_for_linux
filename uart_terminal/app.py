@@ -6,6 +6,7 @@ import tkinter as tk
 from datetime import datetime
 from tkinter import messagebox, ttk
 
+from uart_terminal import APP_NAME, APP_VERSION
 from uart_terminal.log_recorder import LogRecorder
 from uart_terminal.message_list import MessageList
 from uart_terminal.message_log import MessageLog
@@ -20,7 +21,7 @@ _POLL_MS = 30
 class MainWindow(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("UART Terminal")
+        self.title(f"{APP_NAME} {APP_VERSION}")
         self.minsize(960, 560)
         self.geometry("1180x720")
 
@@ -41,6 +42,11 @@ class MainWindow(tk.Tk):
         self.after(_POLL_MS, self._poll_serial)
 
     def _build(self) -> None:
+        title_row = ttk.Frame(self, padding=(8, 8, 8, 0))
+        title_row.pack(fill=tk.X)
+        ttk.Label(title_row, text=APP_NAME, font=("TkDefaultFont", 12, "bold")).pack(side=tk.LEFT)
+        ttk.Label(title_row, text=APP_VERSION).pack(side=tk.LEFT, padx=(8, 0))
+
         toolbar = ttk.Frame(self, padding=(8, 6, 8, 4))
         toolbar.pack(fill=tk.X)
 

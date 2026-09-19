@@ -1,4 +1,4 @@
-# UART Terminal for Linux
+# UART Terminal V1.0
 
 A Docklight-style serial terminal written in Python and Tkinter. Use it to open a UART/COM port, send named sequences from a list, and watch timestamped TX/RX traffic in ASCII or HEX.
 
@@ -26,6 +26,21 @@ source .venv/bin/activate
 pip install -r requirements.txt
 
 python3 main.py
+```
+
+## Standalone executable
+
+A Linux x86_64 binary that does not require Python is in `executable/uart_terminal`. Copy that file to another Linux PC, mark it executable, and run it:
+
+```bash
+chmod +x uart_terminal
+./uart_terminal
+```
+
+The target PC still needs a working serial device and permission to open it (usually the `dialout` group). This build will not run on Windows or macOS; rebuild on those systems with `./build_executable.sh` if you need them.
+
+```bash
+./build_executable.sh
 ```
 
 ## Features
