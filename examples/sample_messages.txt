@@ -1,0 +1,4 @@
+# uart_terminal message list v1
+# index<TAB>name<TAB>encoding<TAB>payload
+1	Ping	ASCII	AT
+2	Reset	HEX	AA 55 0D 0A
