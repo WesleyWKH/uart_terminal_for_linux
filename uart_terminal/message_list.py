@@ -55,25 +55,18 @@ class MessageList(ttk.LabelFrame):
         table.pack(fill=tk.BOTH, expand=True, padx=4, pady=4)
 
         self._canvas = tk.Canvas(table, highlightthickness=0, borderwidth=0)
-        scrollbar = ttk.Scrollbar(table, orient=tk.VERTICAL, command=self._canvas.yview)
+        scrollbar = ttk.Scrollbar(table, orient=tk.VERTICAL, command=self._yview)
         self._inner = ttk.Frame(self._canvas)
-        self._inner.bind(
-            "<Configure>",
-            lambda _event: self._canvas.configure(scrollregion=self._canvas.bbox("all")),
-        )
+        self._inner.bind("<Configure>", lambda _event: self._sync_scrollregion())
         self._window = self._canvas.create_window((0, 0), window=self._inner, anchor="nw")
         self._canvas.configure(yscrollcommand=scrollbar.set)
-        self._canvas.bind(
-            "<Configure>",
-            lambda event: self._canvas.itemconfigure(self._window, width=event.width),
-        )
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
         self._canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        self._canvas.bind("<Enter>", self._bind_wheel)
-        self._canvas.bind("<Leave>", self._unbind_wheel)
-        self._inner.bind("<Enter>", self._bind_wheel)
-        self._inner.bind("<Leave>", self._unbind_wheel)
+        self._bind_wheel_on(self._canvas)
+        self._bind_wheel_on(self._inner)
+        self.bind("<Destroy>", self._on_destroy)
 
         buttons = ttk.Frame(self)
         buttons.pack(fill=tk.X, padx=4, pady=(0, 4))
@@ -91,21 +84,94 @@ class MessageList(ttk.LabelFrame):
 
         self.add_row()
 
+    def _on_destroy(self, event: tk.Event) -> None:
+        if event.widget is not self:
+            return
+        self.unbind_all("<MouseWheel>")
+        self.unbind_all("<Button-4>")
+        self.unbind_all("<Button-5>")
+
+    def _bind_wheel_on(self, widget: tk.Misc) -> None:
+        widget.bind("<Enter>", self._bind_wheel, add="+")
+        widget.bind("<Leave>", self._unbind_wheel, add="+")
+        widget.bind("<MouseWheel>", self._on_mousewheel, add="+")
+        widget.bind("<Button-4>", self._on_mousewheel, add="+")
+        widget.bind("<Button-5>", self._on_mousewheel, add="+")
+        for child in widget.winfo_children():
+            self._bind_wheel_on(child)
+
+    def _widget_in_list(self, widget: tk.Misc | None) -> bool:
+        while widget is not None:
+            if widget in (self._canvas, self._inner):
+                return True
+            widget = getattr(widget, "master", None)
+        return False
+
     def _bind_wheel(self, _event: tk.Event | None = None) -> None:
-        self._canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        self._canvas.bind_all("<Button-4>", self._on_mousewheel)
-        self._canvas.bind_all("<Button-5>", self._on_mousewheel)
+        self.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.bind_all("<Button-4>", self._on_mousewheel)
+        self.bind_all("<Button-5>", self._on_mousewheel)
 
-    def _unbind_wheel(self, _event: tk.Event | None = None) -> None:
-        self._canvas.unbind_all("<MouseWheel>")
-        self._canvas.unbind_all("<Button-4>")
-        self._canvas.unbind_all("<Button-5>")
+    def _unbind_wheel(self, event: tk.Event | None = None) -> None:
+        # Moving from the canvas onto a row widget fires <Leave> on the parent.
+        # Keep scrolling bound while the pointer is still over the list.
+        if event is not None:
+            try:
+                widget = self.winfo_containing(self.winfo_pointerx(), self.winfo_pointery())
+            except tk.TclError:
+                widget = None
+            if self._widget_in_list(widget):
+                return
+        self.unbind_all("<MouseWheel>")
+        self.unbind_all("<Button-4>")
+        self.unbind_all("<Button-5>")
 
-    def _on_mousewheel(self, event: tk.Event) -> None:
-        if event.num == 4 or event.delta > 0:
+    def _on_canvas_configure(self, event: tk.Event) -> None:
+        self._canvas.itemconfigure(self._window, width=event.width)
+        self._sync_scrollregion()
+
+    def _content_height(self) -> int:
+        bbox = self._canvas.bbox("all")
+        if bbox is None:
+            return 0
+        return int(bbox[3] - bbox[1])
+
+    def _content_fits(self) -> bool:
+        return self._content_height() <= self._canvas.winfo_height()
+
+    def _sync_scrollregion(self) -> None:
+        self._canvas.configure(scrollregion=self._canvas.bbox("all") or (0, 0, 0, 0))
+        if self._content_fits():
+            self._canvas.yview_moveto(0)
+
+    def _yview(self, *args: str) -> None:
+        if self._content_fits():
+            self._canvas.yview_moveto(0)
+            return
+        self._canvas.yview(*args)
+
+    def _on_mousewheel(self, event: tk.Event) -> str | None:
+        try:
+            widget = self.winfo_containing(event.x_root, event.y_root)
+        except tk.TclError:
+            widget = getattr(event, "widget", None)
+        if not self._widget_in_list(widget):
+            return None
+        if self._content_fits():
+            self._canvas.yview_moveto(0)
+            return "break"
+        first, last = self._canvas.yview()
+        going_up = event.num == 4 or event.delta > 0
+        going_down = event.num == 5 or event.delta < 0
+        if going_up and first <= 0:
+            return "break"
+        if going_down and last >= 1:
+            return "break"
+        if going_up:
             self._canvas.yview_scroll(-1, "units")
-        elif event.num == 5 or event.delta < 0:
+        elif going_down:
             self._canvas.yview_scroll(1, "units")
+        return "break"
 
     def commit_edits(self, display_format: DisplayFormat | None = None) -> None:
         fmt = display_format or self._display_format
@@ -253,6 +319,7 @@ class MessageList(ttk.LabelFrame):
         payload_entry.bind("<FocusIn>", lambda _event, r=row: self._select_row(r))
         if self._display_format is DisplayFormat.HEX:
             register_hex_validator(payload_entry)
+        self._bind_wheel_on(frame)
         return row
 
     def _send_row(self, row: _Row) -> None:
@@ -283,4 +350,4 @@ class MessageList(ttk.LabelFrame):
             row.index_label.configure(text=str(i + 1))
             row.frame.pack(fill=tk.X, pady=1)
         self._inner.update_idletasks()
-        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        self._sync_scrollregion()

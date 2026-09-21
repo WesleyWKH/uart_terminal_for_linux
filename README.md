@@ -1,4 +1,4 @@
-# UART Terminal V1.0
+# UART Terminal V1.1
 
 A Docklight-style serial terminal written in Python and Tkinter. Use it to open a UART/COM port, send named sequences from a list, and watch timestamped TX/RX traffic in ASCII or HEX.
 
@@ -30,11 +30,11 @@ python3 main.py
 
 ## Standalone executable
 
-A Linux x86_64 binary that does not require Python is in `executable/uart_terminal`. Copy that file to another Linux PC, mark it executable, and run it:
+A Linux x86_64 binary that does not require Python is in `executable/V2.0/uart_terminal_1_1`. Copy that file to another Linux PC, mark it executable, and run it:
 
 ```bash
-chmod +x uart_terminal
-./uart_terminal
+chmod +x uart_terminal_1_1
+./uart_terminal_1_1
 ```
 
 The target PC still needs a working serial device and permission to open it (usually the `dialout` group). This build will not run on Windows or macOS; rebuild on those systems with `./build_executable.sh` if you need them.
@@ -64,16 +64,16 @@ Internal payloads are always bytes. The Display dropdown only changes how the se
 
 ## Message list file format
 
-Import replaces the current send list. Lines starting with `#` and blank lines are ignored. Fields are TAB-separated:
+Import replaces the current send list. Lines starting with `#` and blank lines are ignored. Fields are separated by 1 to 100 TAB and/or SPACE characters:
 
 ```
 # uart_terminal message list v1
-# index<TAB>name<TAB>encoding<TAB>payload
+# index<TAB/SPACE>name<TAB/SPACE>encoding<TAB/SPACE>payload
 1	Ping	ASCII	AT
-2	Reset	HEX	AA 55 0D 0A
+2  Reset  HEX  AA 55 0D 0A
 ```
 
-`encoding` must be `ASCII` or `HEX`. The index column is only for readability; messages are loaded in file order. A sample file is in `examples/sample_messages.txt`.
+`encoding` must be `ASCII` or `HEX`. The index column is only for readability; messages are loaded in file order. Name and encoding cannot contain spaces or tabs; spaces inside the payload (typical for HEX) are kept. A sample file is in `examples/sample_messages.txt`.
 
 ## Log files
 

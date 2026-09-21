@@ -12,10 +12,10 @@ source .venv/bin/activate
 pip install -r requirements.txt
 pip install "pyinstaller>=6.0"
 
-mkdir -p executable
+mkdir -p executable/V2.0
 pyinstaller --noconfirm --clean \
-    --distpath executable \
+    --distpath executable/V2.0 \
     --workpath build \
     uart_terminal.spec
 
-echo "Built $(pwd)/executable/uart_terminal"
+echo "Built $(pwd)/executable/V2.0/uart_terminal_1_1"

@@ -25,7 +25,7 @@ exe = EXE(
     a.binaries,
     a.datas,
     [],
-    name="uart_terminal",
+    name="uart_terminal_1_1",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
