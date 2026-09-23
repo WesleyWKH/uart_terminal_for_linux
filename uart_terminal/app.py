@@ -20,8 +20,13 @@ _POLL_MS = 30
 
 class MainWindow(tk.Tk):
     def __init__(self) -> None:
-        super().__init__()
-        self.title(f"{APP_NAME} {APP_VERSION}")
+        super().__init__(className="UartTerminal")
+        app_label = f"{APP_NAME} {APP_VERSION}"
+        # The dock/taskbar hover label comes from Tk's application name, which
+        # defaults to "tk". Set it before the window is shown.
+        self.tk.call("tk", "appname", app_label)
+        self.title(app_label)
+        self.iconname(app_label)
         self.minsize(960, 560)
         self.geometry("1180x720")
 
